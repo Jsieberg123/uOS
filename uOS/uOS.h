@@ -24,8 +24,6 @@ struct TASK{
 };
 typedef struct TASK Task;
 
-unsigned int numberOfTasks = 0;
-
 Task tasks[MAX_TASKS];
 
 int CreateTask(void (*func)(void*, int));

@@ -2,75 +2,85 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 
+unsigned int numberOfTasks = 0;
+int runningTaskId = 0;
+
 ISR(TIMER1_COMPA_vect)
 {
-	for(int i=0;i<numberOfTasks;i++)
-	{
-		if(tasks[i].state == WAIT)
+    for (int i = 0; i < numberOfTasks; i++)
+    {
+		if (tasks[i].state == WAIT)
 		{
-			if(!(tasks[i].time--))
-			{
+	    	if (!(tasks[i].time--))
+	    	{
 				tasks[i].state = READY;
-			}
+				if(tasks[i].priority > tasks[runningTaskId].priority)
+				{
+					TIFR1 &= ~(1 << OCF1A); //clear the interrupt flag
+					runTask(i);
+				}
+	    	}
 		}
-	}
+    }
+}
+int CreateTask(void (*func)(void *, int))
+{
+    tasks[numberOfTasks].time = 0;
+    tasks[numberOfTasks].state = DONE;
+    tasks[numberOfTasks].priority = 0;
+    tasks[numberOfTasks].func = func;
+
+    return numberOfTasks++;
 }
 
-int CreateTask(void (*func)(void*, int))
+void AddTask(int task, unsigned int time, void *param)
 {
-	tasks[numberOfTasks].time=0;
-	tasks[numberOfTasks].state=DONE;
-	tasks[numberOfTasks].priority=0;
-	tasks[numberOfTasks].func = func;
-
-	return numberOfTasks++;
-}
-
-void AddTask(int task, unsigned int time, void* param)
-{
-	tasks[task].time = time;
-	tasks[task].state = WAIT;
-	tasks[task].param = param;
+    tasks[task].time = time;
+    tasks[task].state = WAIT;
+    tasks[task].param = param;
 }
 
 void SetPriority(int task, unsigned char priority)
 {
-	tasks[task].priority = priority;
+    if (tasks[task].state != RUN)
+    {
+		tasks[task].priority = priority;
+    }
 }
 
 void Run()
 {
-	OCR1A = 800;
+    OCR1A = 800;
     TCCR1B = 0x09;
     TIMSK1 |= (1 << OCIE1A);
 
-	sei();
+    sei();
 
-	while(true)
-	{
-		unsigned int nextTask = chooseNextTask();
-		runTask(nextTask);
-	}
+    while (true)
+    {
+	unsigned int nextTask = chooseNextTask();
+	runTask(nextTask);
+    }
 }
 
 void runTask(int task)
 {
-	tasks[task].state == RUN;
-	tasks[task].func(tasks[task].param, task);
-	tasks[task].state == DONE;
+    tasks[task].state == RUN;
+	runningTaskId = task;
+    tasks[task].func(tasks[task].param, task);
+    tasks[task].state == DONE;
 }
 
 int chooseNextTask()
 {
-	for(int i=PRIORITIES;i>=0;i--)//for each priority
-	{
-		for(int j=0;j<numberOfTasks;j++)//for each task
+    for (int i = PRIORITIES; i >= 0; i--) //for each priority
+    {
+		for (int j = 0; j < numberOfTasks; j++) //for each task
 		{
-			if(tasks[j].priority == i && tasks[j].state == READY)
-			{
+	    	if (tasks[j].priority == i && tasks[j].state == READY)
+	    	{
 				return i;
-			}
+	    	}
 		}
-	}
+    }
 }
-
