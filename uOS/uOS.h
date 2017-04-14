@@ -24,11 +24,11 @@ struct TASK{
 };
 typedef struct TASK Task;
 
-Task tasks[MAX_TASKS];
+volatile Task tasks[MAX_TASKS];
 
 int CreateTask(void (*func)(void*, int));
 
-void AddTask(int task, unsigned int time, void* param);
+void AddTask(int task, unsigned long time, void* param);
 
 void SetPriority(int task, unsigned char priority);
 
